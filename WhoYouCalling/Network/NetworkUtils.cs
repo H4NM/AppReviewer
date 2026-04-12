@@ -5,7 +5,7 @@ using WhoYouCalling.Utilities;
 
 namespace WhoYouCalling.Network
 {
-    internal class NetworkUtils
+    internal partial class NetworkUtils
     {
 
         public static bool IsLocalhostIP(string ip)
@@ -161,14 +161,21 @@ namespace WhoYouCalling.Network
                 }
                 else if (result.Contains("type: "))
                 {
-                    MatchCollection matches = Regex.Matches(result, "type\\:\\s(\\d+)\\s(.*)");
-                    int recordTypeCode = int.Parse(matches[0].Groups[1].Value);
-                    string retrievedTextPart = matches[0].Groups[2].Value;
-                    string domain = string.IsNullOrEmpty(retrievedTextPart) ? "N/A" : retrievedTextPart;
+                    Match match = DNSResponseTypeRegex().Match(result);
+                    if (match.Success)
+                    {
+                        int recordTypeCode = int.Parse(match.Groups[1].Value);
+                        string retrievedTextPart = match.Groups[2].Value;
+                        string domain = string.IsNullOrEmpty(retrievedTextPart) ? "N/A" : retrievedTextPart;
 
-                    responseResult.BundledRecordTypeCode = recordTypeCode;
-                    responseResult.BundledRecordTypeText = DnsCodeLookup.GetDnsTypeName(recordTypeCode);
-                    responseResult.BundledDomain = domain;
+                        responseResult.BundledRecordTypeCode = recordTypeCode;
+                        responseResult.BundledRecordTypeText = DnsCodeLookup.GetDnsTypeName(recordTypeCode);
+                        responseResult.BundledDomain = domain;
+                    }
+                    else
+                    {
+                        ConsoleOutput.Print(message: $"\nUnable to parse DNS Response for \"{result}\". Please create an issue at https://github.com/H4NM/WhoYouCalling/issues with this stacktrace included to help improve WhoYouCalling!\n Data: \n\n {queryResults}\n", type: PrintType.Warning);
+                    }
                 }
                 else
                 {
@@ -177,6 +184,8 @@ namespace WhoYouCalling.Network
             }
             return responseResult;
         }
-        
+
+        [GeneratedRegex("type\\:\\s(\\d+)\\s*(.*)")]
+        private static partial Regex DNSResponseTypeRegex();
     }
 }
